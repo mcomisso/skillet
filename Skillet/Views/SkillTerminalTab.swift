@@ -1,11 +1,27 @@
 import SwiftUI
 import SwiftTerm
 
+/// Bridge between SwiftUI buttons and the AppKit terminal view. A plain
+/// class rather than view @State: the representable assigns `view` inside
+/// makeNSView, and writing SwiftUI state during a view update is discarded
+/// — a class property write is not.
+@MainActor
+final class TerminalSession {
+    fileprivate(set) weak var view: LocalProcessTerminalView?
+
+    /// Types `text` into the shell and gives the terminal keyboard focus.
+    func send(_ text: String) {
+        guard let view else { return }
+        view.send(txt: text)
+        view.window?.makeFirstResponder(view)
+    }
+}
+
 /// An interactive shell rooted in the skill directory, for trying skills
 /// out (e.g. launching `claude` right where the skill lives).
 struct SkillTerminalTab: View {
     let skill: Skill
-    @State private var terminal: LocalProcessTerminalView?
+    @State private var session = TerminalSession()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,20 +33,19 @@ struct SkillTerminalTab: View {
                     .truncationMode(.middle)
                 Spacer()
                 Button("Try in Claude", systemImage: "sparkles") {
-                    // Pre-fill the command; the user reviews and hits return.
-                    terminal?.send(txt: "claude \"Use the \(skill.slug) skill: \"")
+                    // Pre-fill the command; the user completes the prompt
+                    // and hits return.
+                    session.send("claude \"Use the \(skill.slug) skill: \"")
                 }
-                .help("Type a claude invocation that exercises this skill")
+                .help("Type a claude invocation for this skill into the terminal — finish the prompt and press return")
                 Button("List Files", systemImage: "list.bullet") {
-                    terminal?.send(txt: "ls -la\n")
+                    session.send("ls -la\n")
                 }
                 .help("Run ls -la in the skill directory")
             }
             .padding(8)
             Divider()
-            TerminalHostView(directory: skill.resolvedURL) { view in
-                terminal = view
-            }
+            TerminalHostView(directory: skill.resolvedURL, session: session)
         }
     }
 }
@@ -39,7 +54,7 @@ struct SkillTerminalTab: View {
 /// login shell in `directory`. The shell lives as long as the view does.
 struct TerminalHostView: NSViewRepresentable {
     let directory: URL
-    var onReady: (LocalProcessTerminalView) -> Void
+    let session: TerminalSession
 
     func makeNSView(context: Context) -> LocalProcessTerminalView {
         let view = LocalProcessTerminalView(frame: .zero)
@@ -65,9 +80,11 @@ struct TerminalHostView: NSViewRepresentable {
             args: ["-c", "cd '\(escapedPath)' && exec \(shell) -il"],
             environment: envStrings
         )
-        onReady(view)
+        session.view = view
         return view
     }
 
-    func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {}
+    func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {
+        session.view = nsView
+    }
 }
