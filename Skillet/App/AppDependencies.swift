@@ -12,6 +12,7 @@ struct AppDependencies: Sendable {
     var ai: AIAssistant
 
     init() {
+        Self.migrateLegacyAppSupport()
         let git = GitService()
         let snapshots = SnapshotStore(git: git)
         self.scanner = SkillScanner()
@@ -24,6 +25,19 @@ struct AppDependencies: Sendable {
         )
         self.backups = BackupService()
         self.ai = AIAssistant()
+    }
+
+    /// Builds prior to the Skillet rename stored snapshots and upstream
+    /// clones under "SkillsManager"; move the whole folder once so
+    /// checkpoint history survives the rename.
+    private static func migrateLegacyAppSupport() {
+        let fm = FileManager.default
+        let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let legacy = appSupport.appending(path: "SkillsManager")
+        let current = appSupport.appending(path: "Skillet")
+        if fm.fileExists(atPath: legacy.path), !fm.fileExists(atPath: current.path) {
+            try? fm.moveItem(at: legacy, to: current)
+        }
     }
 }
 

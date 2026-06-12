@@ -33,7 +33,7 @@ struct RootView: View {
             }
         }
         .task { viewModel.send(.task) }
-        .navigationTitle("Skills Manager")
+        .navigationTitle("Skillet")
         .toolbar {
             ToolbarItem {
                 Button("New Skill", systemImage: "plus") {

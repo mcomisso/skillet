@@ -44,8 +44,8 @@ struct GitService: Sendable {
     /// Initializes a repository with snapshot-friendly local identity.
     func initRepository(at url: URL) async throws {
         try await run(["init", "--initial-branch=main", url.path], in: nil)
-        try await run(["config", "user.name", "Skills Manager"], in: url)
-        try await run(["config", "user.email", "skillsmanager@local"], in: url)
+        try await run(["config", "user.name", "Skillet"], in: url)
+        try await run(["config", "user.email", "skillet@local"], in: url)
         try await run(["config", "commit.gpgsign", "false"], in: url)
     }
 

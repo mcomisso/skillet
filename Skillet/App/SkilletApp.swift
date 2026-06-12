@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct SkillsManagerApp: App {
+struct SkilletApp: App {
     private let dependencies = AppDependencies()
 
     var body: some Scene {

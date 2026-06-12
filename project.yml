@@ -1,4 +1,4 @@
-name: SkillsManager
+name: Skillet
 options:
   bundleIdPrefix: com.mcsoftware
   deploymentTarget:
@@ -19,17 +19,17 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
 
 targets:
-  SkillsManager:
+  Skillet:
     type: application
     platform: macOS
     sources:
-      - SkillsManager
+      - Skillet
     dependencies:
       - package: SwiftTerm
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mcsoftware.SkillsManager
-        PRODUCT_NAME: SkillsManager
+        PRODUCT_BUNDLE_IDENTIFIER: com.mcsoftware.Skillet
+        PRODUCT_NAME: Skillet
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 1
         GENERATE_INFOPLIST_FILE: YES
@@ -43,28 +43,28 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         SWIFT_EMIT_LOC_STRINGS: YES
 
-  SkillsManagerTests:
+  SkilletTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - SkillsManagerTests
+      - SkilletTests
     dependencies:
-      - target: SkillsManager
+      - target: Skillet
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mcsoftware.SkillsManagerTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.mcsoftware.SkilletTests
         GENERATE_INFOPLIST_FILE: YES
 
 schemes:
-  SkillsManager:
+  Skillet:
     build:
       targets:
-        SkillsManager: all
+        Skillet: all
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - SkillsManagerTests
+        - SkilletTests
     archive:
       config: Release

@@ -13,7 +13,7 @@ actor SnapshotStore {
         self.git = git
         self.repositoryURL = repositoryURL
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appending(path: "SkillsManager/snapshots")
+                .appending(path: "Skillet/snapshots")
     }
 
     /// Stable mirror path of a skill inside the shadow repository.
@@ -45,7 +45,7 @@ actor SnapshotStore {
         if !fm.fileExists(atPath: repositoryURL.appending(path: ".git").path) {
             try fm.createDirectory(at: repositoryURL, withIntermediateDirectories: true)
             try await git.initRepository(at: repositoryURL)
-            try "Skills Manager snapshot repository.\n".write(
+            try "Skillet snapshot repository.\n".write(
                 to: repositoryURL.appending(path: "README.md"),
                 atomically: true,
                 encoding: .utf8

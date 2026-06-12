@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import SkillsManager
+@testable import Skillet
 
 // MARK: - FrontmatterParser
 

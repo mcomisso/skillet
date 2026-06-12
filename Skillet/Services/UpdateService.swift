@@ -22,7 +22,7 @@ actor UpstreamCache {
         self.git = git
         self.rootURL = rootURL
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appending(path: "SkillsManager/upstreams")
+                .appending(path: "Skillet/upstreams")
     }
 
     struct Checkout: Sendable {
