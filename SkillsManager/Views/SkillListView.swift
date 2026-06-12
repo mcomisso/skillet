@@ -49,6 +49,7 @@ struct SkillListView: View {
                 if viewModel.isCheckingUpdates {
                     ProgressView()
                         .controlSize(.small)
+                        .help("Checking skills against their upstream repositories…")
                 } else {
                     Button("Check Updates", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") {
                         viewModel.send(.checkAllUpdates)

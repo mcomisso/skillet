@@ -24,6 +24,7 @@ struct SkillChangesTab: View {
                         viewModel.send(.refreshChanges)
                     }
                     .labelStyle(.iconOnly)
+                    .help("Re-compare the skill with its latest checkpoint")
                     if viewModel.aiAvailable, !changes.working.isEmpty {
                         Button("Summarize", systemImage: "sparkles") {
                             viewModel.send(.summarizeWorkingDiff)

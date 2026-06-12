@@ -34,6 +34,7 @@ struct SkillUpstreamTab: View {
                         viewModel.send(.checkUpstream(forceRefresh: true))
                     }
                     .disabled(upstream.isChecking || upstream.isApplying)
+                    .help("Fetch the upstream repository again and re-compare")
                     if viewModel.aiAvailable, upstream.info?.hasChanges == true {
                         Button("Summarize", systemImage: "sparkles") {
                             viewModel.send(.summarizeUpstreamDiff)
@@ -47,6 +48,7 @@ struct SkillUpstreamTab: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(upstream.isApplying)
+                        .help("Replace local files with the upstream version — the current state is checkpointed first")
                     }
                 }
                 .padding(8)

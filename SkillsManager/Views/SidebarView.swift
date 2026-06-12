@@ -37,6 +37,7 @@ struct SidebarView: View {
                 if viewModel.isScanning {
                     ProgressView()
                         .controlSize(.small)
+                        .help("Scanning skill locations…")
                 } else {
                     Button("Rescan", systemImage: "arrow.clockwise") {
                         viewModel.send(.refresh)

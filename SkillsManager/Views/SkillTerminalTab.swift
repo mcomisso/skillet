@@ -24,6 +24,7 @@ struct SkillTerminalTab: View {
                 Button("List Files", systemImage: "list.bullet") {
                     terminal?.send(txt: "ls -la\n")
                 }
+                .help("Run ls -la in the skill directory")
             }
             .padding(8)
             Divider()

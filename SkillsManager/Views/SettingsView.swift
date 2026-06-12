@@ -22,6 +22,7 @@ struct SettingsView: View {
                     Button("Add Folder…", systemImage: "plus") {
                         addFolder()
                     }
+                    .help("Choose an extra folder to scan for skills")
                     Button("Remove", systemImage: "minus") {
                         if let selection {
                             customRoots.removeAll { $0 == selection }
@@ -29,6 +30,7 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(selection == nil)
+                    .help("Stop scanning the selected folder")
                     Spacer()
                 }
             } header: {

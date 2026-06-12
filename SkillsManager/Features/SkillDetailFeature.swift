@@ -31,6 +31,18 @@ struct SkillDetailFeature: Feature {
             case .terminal: "terminal"
             }
         }
+
+        /// Hover hint for the icon-only segmented control in the toolbar.
+        var help: String {
+            switch self {
+            case .overview: "Overview — metadata, origin, and SKILL.md preview"
+            case .editor: "Editor — edit skill files; every save is checkpointed"
+            case .changes: "Changes — diff against the last checkpoint, history, and restore"
+            case .upstream: "Upstream — compare with the source repository and apply updates"
+            case .files: "Files — browse everything inside the skill"
+            case .terminal: "Terminal — shell session in the skill's directory"
+            }
+        }
     }
 
     struct EditorState: Sendable {

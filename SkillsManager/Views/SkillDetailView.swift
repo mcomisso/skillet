@@ -22,6 +22,7 @@ struct SkillDetailView: View {
                 Picker("Section", selection: viewModel.binding(\.tab, send: { .tabSelected($0) })) {
                     ForEach(SkillDetailFeature.Tab.allCases) { tab in
                         Label(tab.rawValue, systemImage: tab.systemImage)
+                            .help(tab.help)
                             .tag(tab)
                     }
                 }

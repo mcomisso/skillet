@@ -54,10 +54,12 @@ struct SkillEditorTab: View {
                 }
                 if isDirty {
                     Button("Revert") { viewModel.send(.revertFile) }
+                        .help("Discard unsaved changes and reload the file from disk")
                     Button("Save") { viewModel.send(.saveFile) }
                         .keyboardShortcut("s", modifiers: .command)
                         .buttonStyle(.borderedProminent)
                         .disabled(editor.isSaving)
+                        .help("Save the file and record a checkpoint (⌘S)")
                 } else {
                     Text(editor.isSaving ? "Saving…" : "Saved")
                         .font(.caption)
