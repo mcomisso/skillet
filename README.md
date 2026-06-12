@@ -116,7 +116,7 @@ All AI affordances hide themselves when the model isn't available.
 
 ```bash
 brew install xcodegen
-git clone https://github.com/<you>/skillet.git
+git clone https://github.com/mcomisso/skillet.git
 cd skillet
 xcodegen generate
 xcodebuild -project Skillet.xcodeproj -scheme Skillet build
