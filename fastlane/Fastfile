@@ -1,0 +1,141 @@
+# Skillet release automation.
+#
+# Skillet is distributed outside the Mac App Store (Developer ID +
+# notarization) because the app is deliberately not sandboxed — it manages
+# ~/.claude and ~/.agents, runs git, and hosts a PTY shell.
+#
+#   fastlane mac test                  # run the unit tests
+#   fastlane mac build                 # signed + notarized .app in build/
+#   fastlane mac release version:0.2.0 # full release to GitHub
+#
+# Notarization credentials (see fastlane/.env.example):
+#   NOTARIZE_APPLE_ID + FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD
+
+default_platform(:mac)
+
+APP_NAME = "Skillet"
+BUNDLE_ID = "com.mcsoftware.Skillet"
+TEAM_ID = "382G4857JD"
+GITHUB_REPO = "mcomisso/skillet"
+
+platform :mac do
+  desc "Run the unit tests"
+  lane :test do
+    generate_project
+    run_tests(
+      project: "#{APP_NAME}.xcodeproj",
+      scheme: APP_NAME,
+      destination: "platform=macOS"
+    )
+  end
+
+  desc "Build a signed, notarized #{APP_NAME}.app into build/ (no publishing)"
+  lane :build do
+    generate_project
+    build_signed_app
+    notarize_app
+    UI.success("Notarized app at build/#{APP_NAME}.app")
+  end
+
+  desc "Ship a release: bump version, test, build, notarize, package a DMG, tag, and publish a GitHub Release. Usage: fastlane mac release version:0.2.0"
+  lane :release do |options|
+    version = options[:version]
+    UI.user_error!("Pass the new version, e.g. fastlane mac release version:0.2.0") unless version
+    UI.user_error!("Version must look like x.y.z") unless version.match?(/\A\d+\.\d+(\.\d+)?\z/)
+
+    ensure_git_status_clean
+    bump_version(version)
+    generate_project
+
+    run_tests(
+      project: "#{APP_NAME}.xcodeproj",
+      scheme: APP_NAME,
+      destination: "platform=macOS"
+    )
+
+    build_signed_app
+    notarize_app
+    dmg_path = create_dmg(version)
+    update_appcast(version)
+
+    git_commit(path: ["project.yml", "appcast.xml"], message: "Release #{version}")
+    add_git_tag(tag: "v#{version}")
+    push_to_git_remote(tags: true)
+
+    sh("cd .. && gh release create 'v#{version}' '#{dmg_path}' " \
+       "--repo #{GITHUB_REPO} --title '#{APP_NAME} #{version}' --generate-notes")
+    UI.success("Released #{APP_NAME} #{version} 🍳 → https://github.com/#{GITHUB_REPO}/releases/tag/v#{version}")
+  end
+
+  # MARK: - Helpers
+
+  # project.yml is the source of truth; regenerate before any build.
+  def generate_project
+    sh("cd .. && xcodegen generate")
+  end
+
+  def bump_version(version)
+    current_build = sh("cd .. && grep -m1 'CURRENT_PROJECT_VERSION:' project.yml | awk '{print $2}'").strip.to_i
+    sh("cd .. && sed -i '' 's/MARKETING_VERSION: .*/MARKETING_VERSION: #{version}/' project.yml")
+    sh("cd .. && sed -i '' 's/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: #{current_build + 1}/' project.yml")
+  end
+
+  def build_signed_app
+    build_mac_app(
+      project: "#{APP_NAME}.xcodeproj",
+      scheme: APP_NAME,
+      configuration: "Release",
+      export_method: "developer-id",
+      output_directory: "build",
+      clean: true
+    )
+  end
+
+  # Notarizes (and staples) the built app. Uses an Apple ID with an
+  # app-specific password; see .env.example.
+  def notarize_app
+    UI.user_error!("Set NOTARIZE_APPLE_ID (see fastlane/.env.example)") unless ENV["NOTARIZE_APPLE_ID"]
+    notarize(
+      package: "build/#{APP_NAME}.app",
+      bundle_id: BUNDLE_ID,
+      username: ENV["NOTARIZE_APPLE_ID"],
+      asc_provider: TEAM_ID,
+      print_log: true
+    )
+  end
+
+  # Signs the DMG with Skillet's EdDSA key (login keychain, account
+  # "Skillet") and regenerates appcast.xml at the repo root — the feed the
+  # app's Sparkle updater polls via SUFeedURL.
+  def update_appcast(version)
+    tools = "build/SourcePackages/artifacts/sparkle/Sparkle/bin"
+    sh("cd .. && [ -x #{tools}/generate_appcast ] || " \
+       "xcodebuild -project #{APP_NAME}.xcodeproj -scheme #{APP_NAME} " \
+       "-resolvePackageDependencies -clonedSourcePackagesDirPath build/SourcePackages")
+    sh <<~SH
+      cd ..
+      rm -rf build/appcast && mkdir -p build/appcast
+      cp "build/#{APP_NAME}-#{version}.dmg" build/appcast/
+      #{tools}/generate_appcast --account #{APP_NAME} \
+        --download-url-prefix "https://github.com/#{GITHUB_REPO}/releases/download/v#{version}/" \
+        -o appcast.xml build/appcast
+      rm -rf build/appcast
+    SH
+  end
+
+  # Plain DMG with an /Applications shortcut; the app inside is already
+  # notarized and stapled, which is what Gatekeeper checks.
+  def create_dmg(version)
+    dmg = "build/#{APP_NAME}-#{version}.dmg"
+    sh <<~SH
+      cd ..
+      rm -rf build/dmg "#{dmg}"
+      mkdir -p build/dmg
+      cp -R "build/#{APP_NAME}.app" build/dmg/
+      ln -s /Applications build/dmg/Applications
+      hdiutil create -volname "#{APP_NAME} #{version}" -srcfolder build/dmg -ov -format UDZO "#{dmg}"
+      rm -rf build/dmg
+    SH
+    dmg
+  end
+end

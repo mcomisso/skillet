@@ -146,6 +146,9 @@ Or open `Skillet.xcodeproj` in Xcode 26+ and hit Run.
 - **Plays nice with other managers.** Skillet never rewrites the openskills
   lockfile or plugin registries — it reads them for provenance and leaves
   ownership where it belongs.
+- **Auto-updates.** Built-in [Sparkle](https://sparkle-project.org) updater:
+  **Skillet → Check for Updates…** pulls EdDSA-signed releases from this
+  repo's appcast. No account, no store.
 
 ## Architecture
 
@@ -180,6 +183,29 @@ with CoreGraphics:
 ```bash
 swift scripts/generate-icon.swift /tmp/skillet_1024.png
 ```
+
+## Releasing
+
+Skillet ships **outside the Mac App Store** (the app is intentionally not
+sandboxed, which the App Store requires). Releases are Developer ID-signed,
+notarized, and published as DMGs on GitHub Releases via
+[fastlane](https://fastlane.tools):
+
+```bash
+fastlane mac test                    # run the unit tests
+fastlane mac build                   # signed + notarized .app in build/
+fastlane mac release version:0.2.0   # bump, test, build, notarize, DMG, tag, GitHub Release
+```
+
+The release lane bumps `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in
+`project.yml`, signs the DMG with Skillet's Sparkle EdDSA key, regenerates
+`appcast.xml` (the update feed installed apps poll), commits and tags
+`v<version>`, and publishes the DMG with auto-generated release notes
+(`gh` CLI auth is reused — no token setup). Notarization needs credentials
+once: copy `fastlane/.env.example` to `fastlane/.env` and fill in an Apple
+ID app-specific password.
+
+Existing installs pick the release up automatically via Sparkle.
 
 ## Contributing
 
