@@ -96,3 +96,26 @@ enum Format {
         date.formatted(.relative(presentation: .named))
     }
 }
+
+private struct DockBadgeModifier: ViewModifier {
+    let count: Int
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { setDockBadge(count) }
+            .onChange(of: count) { _, newCount in
+                setDockBadge(newCount)
+            }
+    }
+
+    @MainActor
+    private func setDockBadge(_ count: Int) {
+        NSApplication.shared.dockTile.badgeLabel = count > 0 ? "\(count)" : nil
+    }
+}
+
+extension View {
+    func dockBadge(count: Int) -> some View {
+        modifier(DockBadgeModifier(count: count))
+    }
+}

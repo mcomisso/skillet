@@ -34,6 +34,7 @@ struct RootView: View {
         }
         .task { viewModel.send(.task) }
         .navigationTitle("Skillet")
+        .dockBadge(count: viewModel.updateBadgeCount)
         .toolbar {
             ToolbarItem {
                 Button("New Skill", systemImage: "plus") {

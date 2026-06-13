@@ -10,6 +10,15 @@ struct SkillUpdateInfo: Sendable, Equatable {
     var hasChanges: Bool { !diffText.isEmpty }
 }
 
+/// The upstream source and in-repository folder for one installable skill.
+struct SkillUpstreamReference: Identifiable, Sendable, Hashable {
+    var source: String
+    var cloneURL: String
+    var relativePath: String
+
+    var id: String { "\(source)|\(cloneURL)|\(relativePath)" }
+}
+
 /// Maintains shallow clones of upstream skill repositories under
 /// Application Support, one per "owner/repo" source.
 actor UpstreamCache {
@@ -81,34 +90,52 @@ struct UpdateService: Sendable {
         return nil
     }
 
-    func isUpdatable(_ skill: Skill) -> Bool {
-        guard case .openskills(let entry) = skill.origin else { return false }
-        return entry.sourceUrl != nil && Self.upstreamRelativePath(for: skill) != nil
-    }
-
-    /// Refreshes the upstream clone and diffs the local skill against it.
-    func check(skill: Skill, forceRefresh: Bool = false) async throws -> SkillUpdateInfo? {
+    /// Full upstream identity, when the skill origin has enough information
+    /// to clone a source repository and find the skill folder inside it.
+    static func upstreamReference(for skill: Skill) -> SkillUpstreamReference? {
         guard case .openskills(let entry) = skill.origin,
               let cloneURL = entry.sourceUrl,
               let relativePath = Self.upstreamRelativePath(for: skill) else { return nil }
 
-        let checkout = try await cache.checkout(
+        return SkillUpstreamReference(
             source: entry.source,
             cloneURL: cloneURL,
+            relativePath: relativePath
+        )
+    }
+
+    static func isUpdatable(_ skill: Skill) -> Bool {
+        upstreamReference(for: skill) != nil
+    }
+
+    func isUpdatable(_ skill: Skill) -> Bool {
+        Self.isUpdatable(skill)
+    }
+
+    /// Refreshes the upstream clone and diffs the local skill against it.
+    func check(skill: Skill, forceRefresh: Bool = false) async throws -> SkillUpdateInfo? {
+        guard let upstream = Self.upstreamReference(for: skill) else { return nil }
+
+        let checkout = try await cache.checkout(
+            source: upstream.source,
+            cloneURL: upstream.cloneURL,
             forceRefresh: forceRefresh
         )
-        let upstreamDir = checkout.repositoryURL.appending(path: relativePath)
+        let upstreamDir = Self.upstreamDirectory(
+            checkout: checkout.repositoryURL,
+            relativePath: upstream.relativePath
+        )
         guard FileManager.default.fileExists(atPath: upstreamDir.path) else {
             throw ProcessError.failed(
                 command: "update-check",
                 code: 1,
-                stderr: "Upstream repository no longer contains \(relativePath)"
+                stderr: "Upstream repository no longer contains \(upstream.relativePath)"
             )
         }
 
         let diff = try await diffNoIndex(local: skill.resolvedURL, upstream: upstreamDir)
         return SkillUpdateInfo(
-            repository: entry.source,
+            repository: upstream.source,
             headCommit: checkout.headCommit,
             checkedAt: Date(),
             diffText: diff
@@ -118,17 +145,21 @@ struct UpdateService: Sendable {
     /// Overwrites the local skill with upstream content. The current state
     /// is checkpointed first, so customizations stay recoverable.
     func apply(skill: Skill) async throws {
-        guard case .openskills(let entry) = skill.origin,
-              let cloneURL = entry.sourceUrl,
-              let relativePath = Self.upstreamRelativePath(for: skill) else {
+        guard let upstream = Self.upstreamReference(for: skill) else {
             throw ProcessError.failed(
                 command: "update-apply", code: 1,
                 stderr: "This skill has no recorded upstream repository."
             )
         }
         try await snapshots.snapshot(skill: skill, message: "Before update of \(skill.slug)")
-        let checkout = try await cache.checkout(source: entry.source, cloneURL: cloneURL)
-        let upstreamDir = checkout.repositoryURL.appending(path: relativePath)
+        let checkout = try await cache.checkout(
+            source: upstream.source,
+            cloneURL: upstream.cloneURL
+        )
+        let upstreamDir = Self.upstreamDirectory(
+            checkout: checkout.repositoryURL,
+            relativePath: upstream.relativePath
+        )
         try SnapshotStore.copyContents(
             from: upstreamDir,
             to: skill.resolvedURL,
@@ -159,5 +190,9 @@ struct UpdateService: Sendable {
         return result.stdout
             .replacingOccurrences(of: local.path + "/", with: "")
             .replacingOccurrences(of: upstream.path + "/", with: "")
+    }
+
+    private static func upstreamDirectory(checkout: URL, relativePath: String) -> URL {
+        relativePath.isEmpty ? checkout : checkout.appending(path: relativePath)
     }
 }

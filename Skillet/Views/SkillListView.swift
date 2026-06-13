@@ -15,14 +15,36 @@ struct SkillListView: View {
             skills,
             selection: viewModel.binding(\.selectedSkillID, send: { .skillSelected($0) })
         ) { skill in
+            let updateRecord = viewModel.updateRecords[skill.id]
+            let isUpdateLocked = viewModel.updatePreferences.isLocked(skillID: skill.id)
             SkillRowView(
                 skill: skill,
-                updateAvailable: viewModel.updatesAvailable.contains(skill.id)
+                updateRecord: updateRecord,
+                isUpdateLocked: isUpdateLocked
             )
             .tag(skill.id)
             .contextMenu {
                 Button("Reveal in Finder") {
                     NSWorkspace.shared.activateFileViewerSelecting([skill.resolvedURL])
+                }
+                if UpdateService.isUpdatable(skill) {
+                    Divider()
+                    if updateRecord?.status == .available {
+                        Button("Ignore This Update", systemImage: "eye.slash") {
+                            viewModel.send(.ignoreUpdate(skill.id))
+                        }
+                    }
+                    if updateRecord?.status == .ignored {
+                        Button("Show This Update", systemImage: "eye") {
+                            viewModel.send(.showIgnoredUpdate(skill.id))
+                        }
+                    }
+                    Button(
+                        isUpdateLocked ? "Unlock Update Checks" : "Lock Update Checks",
+                        systemImage: isUpdateLocked ? "lock.open" : "lock"
+                    ) {
+                        viewModel.send(.setUpdateChecksLocked(skill.id, !isUpdateLocked))
+                    }
                 }
                 Divider()
                 Button("Move to Trash…", role: .destructive) {
@@ -46,16 +68,31 @@ struct SkillListView: View {
         }
         .toolbar {
             ToolbarItem {
-                if viewModel.isCheckingUpdates {
+                if viewModel.isCheckingUpdates || viewModel.isApplyingAllUpdates {
                     ProgressView()
                         .controlSize(.small)
-                        .help("Checking skills against their upstream repositories…")
+                        .help(viewModel.isCheckingUpdates
+                              ? "Checking skills against their upstream repositories…"
+                              : "Applying skill updates…")
                 } else {
                     Button("Check Updates", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") {
                         viewModel.send(.checkAllUpdates)
                     }
                     .help(viewModel.updateCheckSummary ?? "Compare repo-tracked skills with their upstreams")
                 }
+            }
+            ToolbarItem {
+                Button("Update All", systemImage: "arrow.down.circle") {
+                    viewModel.send(.applyAllUpdates)
+                }
+                .disabled(
+                    viewModel.updateBadgeCount == 0
+                        || viewModel.isCheckingUpdates
+                        || viewModel.isApplyingAllUpdates
+                )
+                .help(viewModel.updateBadgeCount > 0
+                      ? "Apply all available skill updates"
+                      : "No skill updates available")
             }
         }
         .searchable(
@@ -101,7 +138,8 @@ struct SkillListView: View {
 
 struct SkillRowView: View {
     let skill: Skill
-    var updateAvailable = false
+    var updateRecord: SkillUpdateRecord?
+    var isUpdateLocked = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -115,12 +153,10 @@ struct SkillRowView: View {
                         .foregroundStyle(.secondary)
                         .help("Symlinked")
                 }
-                if updateAvailable {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.blue)
-                        .help("Differs from upstream")
-                }
+                SkillUpdateStatusIcon(
+                    record: updateRecord,
+                    isLocked: isUpdateLocked
+                )
                 Spacer()
                 OriginBadge(origin: skill.origin)
             }
@@ -138,5 +174,59 @@ struct SkillRowView: View {
                 .help(skill.resolvedURL.path)
         }
         .padding(.vertical, 3)
+    }
+}
+
+struct SkillUpdateStatusIcon: View {
+    let record: SkillUpdateRecord?
+    let isLocked: Bool
+
+    var body: some View {
+        if let display {
+            Image(systemName: display.systemImage)
+                .font(.caption)
+                .foregroundStyle(display.color)
+                .help(display.help)
+        }
+    }
+
+    private var display: (systemImage: String, color: Color, help: String)? {
+        if isLocked {
+            return (
+                "lock.fill",
+                .secondary,
+                "Update checks are locked for this skill"
+            )
+        }
+
+        guard let record else { return nil }
+        switch record.status {
+        case .available:
+            return (
+                "arrow.down.circle.fill",
+                .blue,
+                "Update available from \(record.repository ?? "upstream")"
+            )
+        case .ignored:
+            return (
+                "eye.slash",
+                .secondary,
+                "This update is ignored"
+            )
+        case .failed(let message):
+            return (
+                "exclamationmark.triangle.fill",
+                .red,
+                "Update check failed: \(message)"
+            )
+        case .locked:
+            return (
+                "lock.fill",
+                .secondary,
+                "Update checks are locked for this skill"
+            )
+        case .upToDate:
+            return nil
+        }
     }
 }
