@@ -59,6 +59,7 @@ platform :mac do
     dmg_path = create_dmg(version)
     update_appcast(version)
 
+    git_add(path: "appcast.xml")
     git_commit(path: ["project.yml", "appcast.xml"], message: "Release #{version}")
     add_git_tag(tag: "v#{version}")
     push_to_git_remote(tags: true)
