@@ -3,6 +3,14 @@
     <channel>
         <title>Skillet</title>
         <item>
+            <title>0.2.1</title>
+            <pubDate>Sat, 13 Jun 2026 18:20:49 +0100</pubDate>
+            <sparkle:version>3</sparkle:version>
+            <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/mcomisso/skillet/releases/download/v0.2.1/Skillet-0.2.1.dmg" length="6879457" type="application/octet-stream" sparkle:edSignature="BqmP3hvon3lJqsRc/53GtyIpScgYJbLC+x1BMaSKyES6LJUIVC9302n5LRFUOkTqMrZSGOldUboaTi+7nZ1kAw=="/>
+        </item>
+        <item>
             <title>0.2.0</title>
             <pubDate>Sat, 13 Jun 2026 02:04:21 +0100</pubDate>
             <sparkle:version>2</sparkle:version>
