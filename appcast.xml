@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Skillet</title>
+        <item>
+            <title>0.2.0</title>
+            <pubDate>Sat, 13 Jun 2026 02:04:21 +0100</pubDate>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/mcomisso/skillet/releases/download/v0.2.0/Skillet-0.2.0.dmg" length="4207413" type="application/octet-stream" sparkle:edSignature="Wu1xG7xBt7GHgYZIbj5VJUHMRYDApUBGC5qxGrR3cEvtw2LVtB4T67m0IAGiaDrT8rvhSkxJrS2PR0dhAHmgAg=="/>
+        </item>
+    </channel>
+</rss>
