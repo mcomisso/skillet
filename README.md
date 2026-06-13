@@ -202,8 +202,9 @@ The release lane bumps `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in
 `appcast.xml` (the update feed installed apps poll), commits and tags
 `v<version>`, and publishes the DMG with auto-generated release notes
 (`gh` CLI auth is reused — no token setup). Notarization needs credentials
-once: copy `fastlane/.env.example` to `fastlane/.env` and fill in an Apple
-ID app-specific password.
+once: copy `fastlane/.env.example` to `fastlane/.env` and fill in an App
+Store Connect **API key** (preferred — pure auth for the notary service,
+nothing App Store-related) or an Apple ID app-specific password.
 
 Existing installs pick the release up automatically via Sparkle.
 

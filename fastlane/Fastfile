@@ -8,7 +8,8 @@
 #   fastlane mac build                 # signed + notarized .app in build/
 #   fastlane mac release version:0.2.0 # full release to GitHub
 #
-# Notarization credentials (see fastlane/.env.example):
+# Notarization credentials (see fastlane/.env.example) — either:
+#   ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_PATH        API key (preferred)
 #   NOTARIZE_APPLE_ID + FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD
 
 default_platform(:mac)
@@ -91,15 +92,28 @@ platform :mac do
     )
   end
 
-  # Notarizes (and staples) the built app. Uses an Apple ID with an
-  # app-specific password; see .env.example.
+  # Notarizes (and staples) the built app. Prefers a key (App Store
+  # Connect API key — pure auth, nothing App Store-related), falls back
+  # to Apple ID + app-specific password; see .env.example.
   def notarize_app
-    UI.user_error!("Set NOTARIZE_APPLE_ID (see fastlane/.env.example)") unless ENV["NOTARIZE_APPLE_ID"]
+    api_key = nil
+    if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"] && ENV["ASC_KEY_PATH"]
+      api_key = app_store_connect_api_key(
+        key_id: ENV["ASC_KEY_ID"],
+        issuer_id: ENV["ASC_ISSUER_ID"],
+        key_filepath: ENV["ASC_KEY_PATH"]
+      )
+    end
+    unless api_key || ENV["NOTARIZE_APPLE_ID"]
+      UI.user_error!("Configure notarization credentials — see fastlane/.env.example")
+    end
+
     notarize(
       package: "build/#{APP_NAME}.app",
       bundle_id: BUNDLE_ID,
-      username: ENV["NOTARIZE_APPLE_ID"],
-      asc_provider: TEAM_ID,
+      api_key: api_key,
+      username: api_key ? nil : ENV["NOTARIZE_APPLE_ID"],
+      asc_provider: api_key ? nil : TEAM_ID,
       print_log: true
     )
   end
