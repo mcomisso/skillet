@@ -16,6 +16,10 @@
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License">
 </p>
 
+<p align="center">
+  <img src="docs/skillet-main-window.png" width="920" alt="Skillet main window showing the skills library sidebar, skill list, and empty detail view">
+</p>
+
 ---
 
 Agent skills — the `SKILL.md` instruction bundles used by Claude Code and
