@@ -2,6 +2,54 @@ import Foundation
 import Testing
 @testable import Skillet
 
+// MARK: - skills.sh directory
+
+struct SkillsDirectoryServiceTests {
+    @Test func decodesSearchResults() throws {
+        let data = Data("""
+        {
+          "skills": [
+            {
+              "id": "vercel-labs/skills/find-skills",
+              "skillId": "find-skills",
+              "name": "find-skills",
+              "installs": 24531,
+              "source": "vercel-labs/skills"
+            }
+          ]
+        }
+        """.utf8)
+
+        let result = try SkillsDirectoryService.decodeSearchResponse(data)
+
+        #expect(result == [SkillsDirectorySkill(
+            id: "vercel-labs/skills/find-skills",
+            skillID: "find-skills",
+            name: "find-skills",
+            installs: 24_531,
+            source: "vercel-labs/skills"
+        )])
+        #expect(result.first?.webpageURL?.absoluteString == "https://skills.sh/vercel-labs/skills/find-skills")
+    }
+
+    @Test func buildsNonInteractiveGlobalInstallArguments() {
+        let home = URL(filePath: "/tmp/skillet-empty-home")
+        let skill = SkillsDirectorySkill(
+            id: "owner/repo/example",
+            skillID: "example",
+            name: "Example",
+            installs: 10,
+            source: "owner/repo"
+        )
+
+        #expect(SkillsDirectoryService.installArguments(skill: skill, homeDirectory: home) == [
+            "--yes", "skills", "add", "owner/repo",
+            "--skill", "example",
+            "--global", "--yes", "--agent", "claude-code"
+        ])
+    }
+}
+
 // MARK: - FrontmatterParser
 
 struct FrontmatterParserTests {
@@ -70,7 +118,7 @@ struct FrontmatterParserTests {
 // MARK: - SkillScanner
 
 struct SkillScannerTests {
-    /// Builds a fake home directory with all three ecosystems populated.
+    /// Builds a fake home directory with all supported ecosystems populated.
     private func makeFixtureHome() throws -> URL {
         let home = URL(filePath: NSTemporaryDirectory())
             .appending(path: "skillsmanager-tests-\(UUID().uuidString)")
@@ -143,6 +191,20 @@ struct SkillScannerTests {
           }
         }
         """.write(to: home.appending(path: ".agents/.skill-lock.json"), atomically: true, encoding: .utf8)
+
+        // Codex-only skill plus an alias to the managed ~/.agents copy.
+        let codexOnly = home.appending(path: ".codex/skills/codex-only")
+        try fm.createDirectory(at: codexOnly, withIntermediateDirectories: true)
+        try """
+        ---
+        name: codex-only
+        description: Native Codex skill
+        ---
+        """.write(to: codexOnly.appending(path: "SKILL.md"), atomically: true, encoding: .utf8)
+        try fm.createSymbolicLink(
+            at: home.appending(path: ".codex/skills/locked-skill"),
+            withDestinationURL: agents
+        )
 
         // Plugin with one skill: enabled globally and in one project.
         let pluginInstall = home.appending(path: ".claude/plugins/cache/mp/coolplugin/1.0.0")
@@ -222,6 +284,12 @@ struct SkillScannerTests {
             Issue.record("expected openskills origin, got \(locked.origin)")
         }
 
+        let codex = try #require(snapshot.sections.first { $0.root.kind == .codexUser })
+        #expect(codex.root.name == "Codex")
+        #expect(codex.skills.map(\.slug) == ["codex-only"])
+        #expect(codex.skills.first?.description == "Native Codex skill")
+        #expect(snapshot.allSkills.filter { $0.slug == "locked-skill" }.count == 1)
+
         let plugins = try #require(snapshot.sections.first { $0.root.kind == .plugins })
         let cool = try #require(plugins.skills.first { $0.slug == "cool-skill" })
         if case .plugin(let provenance) = cool.origin {
@@ -279,5 +347,27 @@ struct SkillScannerTests {
         let snapshot = await SkillScanner(homeDirectory: home).scan(extraRoots: [])
         let claude = snapshot.sections.first { $0.root.kind == .claudeUser }
         #expect(claude?.skills.isEmpty == true)
+    }
+
+    @Test func keepsIndependentSkillsWithTheSameSlug() async throws {
+        let home = URL(filePath: NSTemporaryDirectory())
+            .appending(path: "skillsmanager-tests-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        for relativePath in [".agents/skills/shared", ".codex/skills/shared"] {
+            let directory = home.appending(path: relativePath)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try "---\nname: shared\n---\n\(relativePath)".write(
+                to: directory.appending(path: "SKILL.md"),
+                atomically: true,
+                encoding: .utf8
+            )
+        }
+
+        let snapshot = await SkillScanner(homeDirectory: home).scan(extraRoots: [])
+
+        #expect(snapshot.allSkills.filter { $0.slug == "shared" }.count == 2)
+        #expect(snapshot.sections.first { $0.root.kind == .openskills }?.skills.count == 1)
+        #expect(snapshot.sections.first { $0.root.kind == .codexUser }?.skills.count == 1)
     }
 }

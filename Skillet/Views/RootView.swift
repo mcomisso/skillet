@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @State private var viewModel: ViewModel<AppFeature>
     @State private var showNewSkill = false
+    @State private var showSkillsDirectory = false
     private let dependencies: AppDependencies
 
     init(dependencies: AppDependencies) {
@@ -37,6 +38,12 @@ struct RootView: View {
         .dockBadge(count: viewModel.updateBadgeCount)
         .toolbar {
             ToolbarItem {
+                Button("Discover Skills", systemImage: "globe") {
+                    showSkillsDirectory = true
+                }
+                .help("Search and install skills from skills.sh")
+            }
+            ToolbarItem {
                 Button("New Skill", systemImage: "plus") {
                     showNewSkill = true
                 }
@@ -49,6 +56,11 @@ struct RootView: View {
         .sheet(isPresented: $showNewSkill) {
             NewSkillSheet(dependencies: dependencies) { [viewModel] url in
                 viewModel.send(.skillCreated(path: url.path))
+            }
+        }
+        .sheet(isPresented: $showSkillsDirectory) {
+            SkillsDirectorySheet(directory: dependencies.skillsDirectory) { [viewModel] in
+                viewModel.send(.refresh)
             }
         }
         .sheet(isPresented: Binding(

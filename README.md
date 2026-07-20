@@ -22,7 +22,7 @@
 
 ---
 
-Agent skills — the `SKILL.md` instruction bundles used by Claude Code and
+Agent skills — the `SKILL.md` instruction bundles used by Claude Code, Codex, and
 friends — end up scattered across your machine: some installed by
 [openskills](https://github.com/numman-ali/openskills), some by plugins, some
 symlinked from dev checkouts, some hand-rolled. Each tool manages its own
@@ -38,6 +38,8 @@ upstream repositories.
 |---|---|---|
 | **Claude Code** | `~/.claude/skills` | Plain skills, gstack-managed bundles (symlinked `SKILL.md`), and skills symlinked to local dev checkouts (with their git repo) |
 | **OpenSkills** | `~/.agents/skills` | Installs matched to their GitHub source repository via `.skill-lock.json` |
+| **Codex** | `~/.codex/skills` | Codex-specific skills; aliases to skills already indexed from `~/.agents/skills` are deduplicated |
+| **skills.sh** | Discover toolbar | Search the public catalog and install through the official `npx skills` CLI; installs are indexed from `~/.agents/skills` |
 | **Plugins** | `~/.claude/plugins` | Skills bundled inside globally enabled Claude Code plugins, with plugin name, marketplace, and version |
 | **Projects** | `<project>/.claude/skills` | Per-project skills, discovered from Claude Code's project registry — plus plugin skills enabled *only* in that project |
 | **Custom** | anywhere | Extra folders you add in Settings |
@@ -140,9 +142,9 @@ Or open `Skillet.xcodeproj` in Xcode 26+ and hit Run.
 - **Not sandboxed.** Skillet manages files in `~/.claude` and `~/.agents`,
   runs `git`, and hosts a PTY shell — all things the App Sandbox prohibits.
   Hardened runtime is enabled.
-- **Local-only.** The only network traffic is `git clone`/`fetch` of the
-  skill repositories you ask it to compare against. No telemetry, no
-  accounts, no cloud.
+- **No accounts or telemetry.** Network traffic is limited to skills.sh
+  searches and the repository downloads or git operations you request.
+  Skillet disables the skills CLI's anonymous telemetry for installs.
 - **Self-contained state.** Everything Skillet creates lives in
   `~/Library/Application Support/Skillet/` (`snapshots/` — the checkpoint
   repo, `upstreams/` — cached clones). Delete that folder and Skillet

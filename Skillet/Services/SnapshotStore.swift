@@ -24,6 +24,7 @@ actor SnapshotStore {
         default:
             switch skill.root.kind {
             case .claudeUser: return "claude/\(sanitize(skill.slug))"
+            case .codexUser: return "codex/\(sanitize(skill.slug))"
             case .openskills: return "openskills/\(sanitize(skill.slug))"
             case .plugins: return "plugins/\(sanitize(skill.slug))"
             case .project, .custom:

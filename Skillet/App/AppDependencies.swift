@@ -10,6 +10,7 @@ struct AppDependencies: Sendable {
     var updates: UpdateService
     var backups: BackupService
     var ai: AIAssistant
+    var skillsDirectory: SkillsDirectoryService
 
     init() {
         Self.migrateLegacyAppSupport()
@@ -25,6 +26,7 @@ struct AppDependencies: Sendable {
         )
         self.backups = BackupService()
         self.ai = AIAssistant()
+        self.skillsDirectory = SkillsDirectoryService()
     }
 
     /// Builds prior to the Skillet rename stored snapshots and upstream

@@ -174,4 +174,35 @@ struct SnapshotStoreTests {
         #expect(fileType == FileAttributeType.typeRegular)
         #expect(try String(contentsOf: mirrored, encoding: .utf8) == "real content")
     }
+
+    @Test func codexSkillsUseTheirOwnSnapshotNamespace() throws {
+        let home = URL(filePath: NSTemporaryDirectory())
+            .appending(path: "snapshot-tests-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: home) }
+        var skill = try makeSkill(
+            home: home,
+            slug: "codex-example"
+        )
+        skill.root = .codexUser(home: home)
+
+        #expect(SnapshotStore.mirrorPath(for: skill) == "codex/codex-example")
+    }
+}
+
+struct BackupServiceTests {
+    @Test func codexSkillsRestoreToTheCodexRoot() {
+        let home = URL(filePath: "/tmp/skillet-backup-home")
+        let entry = BackupManifest.Entry(
+            slug: "example",
+            name: "Example",
+            rootKind: .codexUser,
+            originLabel: "unmanaged",
+            repository: nil,
+            archivePath: "skills/codexUser/example"
+        )
+
+        let destination = BackupService(homeDirectory: home).destinationDirectory(for: entry)
+
+        #expect(destination == home.appending(path: ".codex/skills/example"))
+    }
 }

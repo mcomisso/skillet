@@ -4,6 +4,7 @@ import Foundation
 struct SkillRoot: Identifiable, Hashable, Sendable {
     enum Kind: String, Sendable, CaseIterable, Codable {
         case claudeUser
+        case codexUser
         case openskills
         case plugins
         case project
@@ -12,6 +13,7 @@ struct SkillRoot: Identifiable, Hashable, Sendable {
         var displayName: String {
             switch self {
             case .claudeUser: "Claude Code"
+            case .codexUser: "Codex"
             case .openskills: "OpenSkills"
             case .plugins: "Plugins"
             case .project: "Project"
@@ -22,6 +24,7 @@ struct SkillRoot: Identifiable, Hashable, Sendable {
         var systemImage: String {
             switch self {
             case .claudeUser: "person.crop.circle"
+            case .codexUser: "terminal"
             case .openskills: "shippingbox"
             case .plugins: "puzzlepiece.extension"
             case .project: "folder.badge.gearshape"
@@ -55,6 +58,14 @@ struct SkillRoot: Identifiable, Hashable, Sendable {
             kind: .openskills,
             url: home.appending(path: ".agents/skills"),
             name: "OpenSkills"
+        )
+    }
+
+    static func codexUser(home: URL) -> SkillRoot {
+        SkillRoot(
+            kind: .codexUser,
+            url: home.appending(path: ".codex/skills"),
+            name: "Codex"
         )
     }
 

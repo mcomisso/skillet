@@ -7,8 +7,8 @@ protocol SkillScanning: Sendable {
 
 /// Discovers installed skills across the supported ecosystems:
 /// ~/.claude/skills (Claude Code user skills, including gstack-managed and
-/// dev-symlinked ones), ~/.agents/skills (openskills), and skills bundled
-/// inside installed Claude Code plugins.
+/// dev-symlinked ones), ~/.agents/skills (openskills), ~/.codex/skills, and
+/// skills bundled inside installed Claude Code plugins.
 struct SkillScanner: SkillScanning {
     var homeDirectory: URL
 
@@ -33,6 +33,20 @@ struct SkillScanner: SkillScanning {
                 root: agentsRoot,
                 skills: Self.scanDirectoryRoot(agentsRoot, lock: lock)
             ))
+
+            // Codex can expose skills already installed in ~/.agents/skills
+            // through symlinks. Keep the managed ~/.agents appearance so its
+            // provenance/update metadata wins, and only show Codex-unique
+            // physical directories in the Codex section.
+            let existingDirectoryPaths = Set(
+                sections.flatMap(\.skills).map(Self.canonicalDirectoryPath)
+            )
+            var seenDirectoryPaths = existingDirectoryPaths
+            let codexRoot = SkillRoot.codexUser(home: home)
+            let codexSkills = Self.scanDirectoryRoot(codexRoot).filter {
+                seenDirectoryPaths.insert(Self.canonicalDirectoryPath($0)).inserted
+            }
+            sections.append(ScanSnapshot.Section(root: codexRoot, skills: codexSkills))
 
             let registry = PluginRegistry.load(
                 pluginsDirectory: home.appending(path: ".claude/plugins")
@@ -59,6 +73,10 @@ struct SkillScanner: SkillScanning {
     }
 
     // MARK: - Directory roots (one subdirectory per skill)
+
+    private static func canonicalDirectoryPath(_ skill: Skill) -> String {
+        skill.resolvedURL.standardizedFileURL.path
+    }
 
     private static func scanDirectoryRoot(
         _ root: SkillRoot,

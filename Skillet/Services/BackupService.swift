@@ -156,6 +156,8 @@ struct BackupService: Sendable {
         switch entry.rootKind {
         case .openskills:
             homeDirectory.appending(path: ".agents/skills/\(entry.slug)")
+        case .codexUser:
+            homeDirectory.appending(path: ".codex/skills/\(entry.slug)")
         case .claudeUser, .plugins, .project, .custom:
             homeDirectory.appending(path: ".claude/skills/\(entry.slug)")
         }
